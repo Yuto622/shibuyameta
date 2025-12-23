@@ -1,0 +1,84 @@
+import unreal
+import random
+
+# --- settings ---
+MAP_PATH = "/Game/Maps/Shibuya_MVP"  # すでに保存しているマップ名に合わせる
+GRID_X = 12
+GRID_Y = 12
+BLOCK_SIZE = 1200.0
+ROAD_W = 220.0
+BUILDING_MIN = 300.0
+BUILDING_MAX = 1200.0
+BUILDING_H_MIN = 300.0
+BUILDING_H_MAX = 4200.0
+
+# assets
+CUBE = unreal.load_object(None, "/Engine/BasicShapes/Cube.Cube")
+PLANE = unreal.load_object(None, "/Engine/BasicShapes/Plane.Plane")
+
+editor = unreal.EditorLevelLibrary
+subsys = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+
+def spawn_static(mesh, location, scale, label):
+    actor = editor.spawn_actor_from_object(mesh, location)
+    if actor:
+        actor.set_actor_scale3d(scale)
+        actor.set_actor_label(label, mark_dirty=False)
+    return actor
+
+def main():
+    # 現在開いているレベル上に生成する前提（マップは先に開いておく）
+    # 生成先を空にしたい場合は、手動でレベル内の生成物を消してから実行してください
+
+    # --- ground ---
+    spawn_static(
+        PLANE,
+        unreal.Vector(0, 0, 0),
+        unreal.Vector(GRID_X * BLOCK_SIZE / 100.0, GRID_Y * BLOCK_SIZE / 100.0, 1),
+        "Ground"
+    )
+
+    # --- roads (grid) ---
+    # 横方向道路
+    for y in range(GRID_Y + 1):
+        ly = (y - GRID_Y / 2) * BLOCK_SIZE
+        spawn_static(
+            PLANE,
+            unreal.Vector(0, ly, 2),
+            unreal.Vector(GRID_X * BLOCK_SIZE / 100.0, ROAD_W / 100.0, 1),
+            f"Road_H_{y}"
+        )
+
+    # 縦方向道路
+    for x in range(GRID_X + 1):
+        lx = (x - GRID_X / 2) * BLOCK_SIZE
+        spawn_static(
+            PLANE,
+            unreal.Vector(lx, 0, 2),
+            unreal.Vector(ROAD_W / 100.0, GRID_Y * BLOCK_SIZE / 100.0, 1),
+            f"Road_V_{x}"
+        )
+
+    # --- buildings ---
+    for x in range(GRID_X):
+        for y in range(GRID_Y):
+            # ブロック中心
+            cx = (x - GRID_X / 2 + 0.5) * BLOCK_SIZE
+            cy = (y - GRID_Y / 2 + 0.5) * BLOCK_SIZE
+
+            # 道路分の余白を確保
+            bw = random.uniform(BUILDING_MIN, BUILDING_MAX)
+            bd = random.uniform(BUILDING_MIN, BUILDING_MAX)
+            bh = random.uniform(BUILDING_H_MIN, BUILDING_H_MAX)
+
+            # ちょっと散らす
+            ox = random.uniform(-120, 120)
+            oy = random.uniform(-120, 120)
+
+            location = unreal.Vector(cx + ox, cy + oy, bh / 2.0)
+            scale = unreal.Vector(bw / 100.0, bd / 100.0, bh / 100.0)
+            spawn_static(CUBE, location, scale, f"B_{x}_{y}")
+
+    unreal.log("Generated Shibuya MVP blocks ✅")
+
+main()
